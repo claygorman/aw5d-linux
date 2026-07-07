@@ -6,6 +6,9 @@ All notable changes to this project are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- Unit test suite (stdlib `unittest`, `tests/`) run in CI — asserts `build_packet`
+  against the captured golden packet (byte-for-byte), plus MHz/temp encoding, usage
+  math, and env parsing. Run with `just test`.
 - `doctor` command (`python3 aw5d_lcd.py doctor` / `just doctor`) — diagnoses device
   presence, hidraw writability, CPU sensors, and service state, with fix hints; exits
   non-zero on a critical failure. The first stop for a dark screen.

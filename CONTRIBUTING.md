@@ -22,8 +22,13 @@ widen the supported PID list.
 - Protocol details and how it was reverse-engineered live in
   [`RESEARCH.md`](RESEARCH.md).
 - Test without a device: `python3 aw5d_lcd.py --dry-run --verbose`.
-- Before opening a PR: `python3 -m py_compile aw5d_lcd.py` (and `ruff check` /
-  `flake8` if you have them). CI runs these on every PR.
+- Unit tests (stdlib `unittest`, no pip needed): `python3 -m unittest discover -s tests`
+  (or `just test`).
+- If you change the packet format (`build_packet`), add/adjust a case in
+  `tests/test_aw5d_lcd.py` — the idle frame is asserted **byte-for-byte** against the
+  captured golden packet.
+- Before opening a PR, run the tests + `python3 -m py_compile aw5d_lcd.py` (and
+  `ruff check` if you have it). CI runs all of these on every PR.
 
 ## Clean-room rule (please read)
 

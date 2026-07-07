@@ -36,6 +36,10 @@ list:
 doctor:
     python3 aw5d_lcd.py doctor
 
+# Run the unit tests (stdlib unittest — no pip needed)
+test:
+    python3 -m unittest discover -s tests -v
+
 # Set the LCD update interval in seconds, e.g. `just set-interval 2`
 # (panel is ~1 Hz; 1s is ideal, 2-5s is fine, <0.5s just wastes traffic)
 set-interval seconds:
