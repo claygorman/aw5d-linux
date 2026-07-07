@@ -43,6 +43,15 @@ test:
 # Set the LCD update interval in seconds, e.g. `just set-interval 2`
 # (panel is ~1 Hz; 1s is ideal, 2-5s is fine, <0.5s just wastes traffic)
 set-interval seconds:
-    echo 'AW5D_INTERVAL={{seconds}}' > ~/.config/aw5d-lcd.env
+    #!/usr/bin/env bash
+    set -euo pipefail
+    f=~/.config/aw5d-lcd.env
+    mkdir -p ~/.config; touch "$f"
+    # Replace the AW5D_INTERVAL line in place (or append) — don't clobber other settings.
+    if grep -q '^AW5D_INTERVAL=' "$f"; then
+        sed -i 's/^AW5D_INTERVAL=.*/AW5D_INTERVAL={{seconds}}/' "$f"
+    else
+        echo 'AW5D_INTERVAL={{seconds}}' >> "$f"
+    fi
     systemctl --user restart aw5d-lcd
-    @echo "aw5d-lcd interval set to {{seconds}}s"
+    echo "aw5d-lcd interval set to {{seconds}}s"

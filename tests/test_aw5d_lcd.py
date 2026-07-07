@@ -112,5 +112,35 @@ class ParseArgsTest(unittest.TestCase):
             self.assertEqual(a.parse_args([cmd]).command, cmd)
 
 
+class RunOnceTest(unittest.TestCase):
+    """`--once` must always terminate (regression: it used to hang forever with no device)."""
+
+    def setUp(self):
+        import signal
+        self._sig = (signal.getsignal(signal.SIGINT), signal.getsignal(signal.SIGTERM))
+        self._orig = {n: getattr(a, n) for n in
+                      ("find_hidraw", "find_cpu_temp_input", "read_cpu_times", "read_avg_mhz")}
+        # Deterministic sensors so the tests don't depend on the host.
+        a.find_cpu_temp_input = lambda: None
+        a.read_cpu_times = lambda: (1000, 500)
+        a.read_avg_mhz = lambda: 3000
+
+    def tearDown(self):
+        import signal
+        for name, fn in self._orig.items():
+            setattr(a, name, fn)
+        signal.signal(signal.SIGINT, self._sig[0])
+        signal.signal(signal.SIGTERM, self._sig[1])
+
+    def test_once_returns_failure_when_no_device(self):
+        a.find_hidraw = lambda *_a, **_k: None  # cooler unplugged
+        rc = a.run(a.parse_args(["run", "--once", "--interval", "0.05"]))
+        self.assertEqual(rc, 1)  # returns (does NOT hang) with a failure code
+
+    def test_once_dry_run_returns_zero(self):
+        rc = a.run(a.parse_args(["run", "--once", "--dry-run", "--interval", "0.05"]))
+        self.assertEqual(rc, 0)  # one frame "sent" in dry-run, then exits cleanly
+
+
 if __name__ == "__main__":
     unittest.main()

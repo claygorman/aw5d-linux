@@ -55,7 +55,7 @@ PRODUCT_ID = 0x0407
 REPORT_ID = 0x10
 REPORT_LEN = 64  # report id + 63 payload bytes
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 REPO_URL = "https://github.com/claygorman/aw5d-linux"
 
 # The cooler's firmware re-renders the gauge at ~1 Hz, so ~1s is the natural cadence.
@@ -249,67 +249,81 @@ def run(args: argparse.Namespace) -> int:
         temp = read_temp_c(temp_input) if temp_input else 0.0
         return now_times, usage, mhz, temp
 
-    # Seed a first /proc/stat sample so usage is meaningful.
-    prev_times = read_cpu_times()
-    time.sleep(min(0.25, args.interval))
-
     fd = -1
-    dev_path = args.device
-    backoff = 1.0
 
-    try:
-        while True:
-            prev_times, usage, mhz, temp = sample(prev_times)
-            pkt = build_packet(usage, mhz, temp)
-
-            if args.verbose or args.dry_run:
-                log(
-                    f"usage={usage:5.1f}%  mhz={mhz:5d}  temp={temp:5.1f}C  ->  "
-                    + pkt[:13].hex(" "),
-                    verbose=True,
-                )
-
-            if not args.dry_run:
-                if fd < 0:
-                    dev_path = args.device or find_hidraw()
-                    if not dev_path:
-                        log(f"device {VENDOR_ID:04x}:{PRODUCT_ID:04x} not found; "
-                            f"retrying in {backoff:.0f}s")
-                        time.sleep(backoff)
-                        backoff = min(backoff * 2, 15.0)
-                        continue
-                    try:
-                        fd = open_device(dev_path)
-                        log(f"opened {dev_path}")
-                        backoff = 1.0
-                    except OSError as exc:
-                        log(f"cannot open {dev_path}: {exc}; retrying in {backoff:.0f}s")
-                        time.sleep(backoff)
-                        backoff = min(backoff * 2, 15.0)
-                        continue
-                try:
-                    os.write(fd, pkt)
-                except OSError as exc:
-                    log(f"write failed ({exc}); will reopen device")
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
-                    fd = -1
-                    continue
-
-            if args.once:
-                break
-            time.sleep(args.interval)
-    except Stop:
-        log("stopping")
-    finally:
+    def close_fd():
+        nonlocal fd
         if fd >= 0:
             try:
                 os.close(fd)
             except OSError:
                 pass
-    return 0
+            fd = -1
+
+    # Seed a first /proc/stat sample so usage is meaningful (tolerate a bad read).
+    try:
+        prev_times = read_cpu_times()
+    except (OSError, ValueError, IndexError):
+        prev_times = (0, 0)
+    time.sleep(min(0.25, args.interval))
+
+    def one_cycle() -> bool:
+        """Read sensors + send one frame. Returns True iff a frame was sent (or dry-run).
+
+        A transient sensor error just skips this frame (the daemon must survive
+        e.g. hwmon renumbering on suspend/resume) rather than crashing.
+        """
+        nonlocal prev_times, fd
+        try:
+            prev_times, usage, mhz, temp = sample(prev_times)
+        except (OSError, ValueError, IndexError) as exc:
+            log(f"sensor read failed ({exc}); skipping this frame")
+            return False
+        pkt = build_packet(usage, mhz, temp)
+        if args.verbose or args.dry_run:
+            log(f"usage={usage:5.1f}%  mhz={mhz:5d}  temp={temp:5.1f}C  ->  " + pkt[:13].hex(" "))
+        if args.dry_run:
+            return True
+        if fd < 0:
+            dev_path = args.device or find_hidraw()
+            if not dev_path:
+                log(f"device {VENDOR_ID:04x}:{PRODUCT_ID:04x} not found")
+                return False
+            try:
+                fd = open_device(dev_path)
+                log(f"opened {dev_path}")
+            except OSError as exc:
+                log(f"cannot open {dev_path}: {exc}")
+                return False
+        try:
+            os.write(fd, pkt)
+            return True
+        except OSError as exc:
+            log(f"write failed ({exc}); will reopen device")
+            close_fd()
+            return False
+
+    rc = 0
+    backoff = 1.0
+    try:
+        if args.once:
+            rc = 0 if one_cycle() else 1  # exactly one attempt, then exit (never hangs)
+        else:
+            while True:
+                if one_cycle():
+                    backoff = 1.0
+                    time.sleep(args.interval)
+                else:
+                    time.sleep(backoff)  # back off on device-missing / read / write errors
+                    backoff = min(backoff * 2, 15.0)
+    except Stop:
+        log("stopping")
+    finally:
+        # Ignore further signals so cleanup can't be interrupted into a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        close_fd()
+    return rc
 
 
 def _env_interval() -> float:
@@ -427,12 +441,18 @@ def self_update() -> int:
 
         print("[aw5d-lcd] running installer")
         subprocess.run(["bash", os.path.join(src, "install.sh")], env=env, check=True)
-        # Restart so the running service picks up the new code (install.sh won't restart it).
-        subprocess.run(["systemctl", "--user", "restart", "aw5d-lcd.service"], env=env, check=False)
+        # Restart so the running service picks up the new code (install.sh won't restart an
+        # already-active unit). Don't claim success if this fails — the old code keeps running.
+        restart = subprocess.run(["systemctl", "--user", "restart", "aw5d-lcd.service"], env=env)
     except subprocess.CalledProcessError as exc:
         print(f"[aw5d-lcd] self-update failed: {exc}", file=sys.stderr)
         return 1
 
+    if restart.returncode != 0:
+        print("[aw5d-lcd] files updated, but the service restart FAILED — the running daemon may\n"
+              "           still be on the old code. Restart it: systemctl --user restart aw5d-lcd",
+              file=sys.stderr)
+        return 1
     print("[aw5d-lcd] up to date. (manual only — aw5d-lcd never auto-updates.)")
     return 0
 

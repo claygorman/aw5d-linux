@@ -5,6 +5,30 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-07-07
+
+### Fixed
+- **`--once` no longer hangs forever** when the cooler isn't found (or a write fails): the
+  reconnect path skipped the exit check, so `aw5d-lcd --once` looped instead of exiting. It now
+  makes exactly one attempt and exits (0 on success, 1 on failure).
+- **A transient sensor error no longer crashes the daemon** — a momentary `OSError`/`IndexError`
+  from `k10temp`/`/proc/stat`/`cpufreq` (e.g. hwmon renumbering on suspend/resume) now skips the
+  frame and continues instead of taking the process down.
+- **`self-update` no longer claims "up to date" when the restart failed** (which left the old
+  code running); it reports the failure and exits non-zero.
+- **`install.sh`**: `AW5D_BIN_DIR` at a non-writable dir (e.g. `/usr/local/bin`) writes the
+  launcher with `sudo` instead of aborting mid-install; a missing systemd `--user` session
+  (e.g. `curl|bash` over bare SSH) fails early with a clear message; the unit-render `sed`
+  escapes special chars in the Python path; and `--uninstall` also removes
+  `~/.config/aw5d-lcd.env` and the bootstrap checkout.
+- **`just set-interval`** replaces only the `AW5D_INTERVAL` line instead of truncating the whole
+  `~/.config/aw5d-lcd.env` (which destroyed other settings/comments).
+- **Clean shutdown**: signals are ignored during cleanup so a SIGTERM at the wrong instant can't
+  turn the exit into a traceback.
+
+### Added
+- Tests asserting `--once` always terminates (regression guard for the hang).
+
 ## [1.1.1] - 2026-07-07
 
 ### Fixed
@@ -60,7 +84,8 @@ Initial public release.
   variant" issue form, and `CODEOWNERS`.
 - Full reverse-engineering writeup and validated protocol in `RESEARCH.md`.
 
-[Unreleased]: https://github.com/claygorman/aw5d-linux/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/claygorman/aw5d-linux/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/claygorman/aw5d-linux/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/claygorman/aw5d-linux/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/claygorman/aw5d-linux/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/claygorman/aw5d-linux/releases/tag/v1.0.0
