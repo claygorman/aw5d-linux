@@ -110,22 +110,29 @@ driver by hand. But it has three commands (handy for setup + troubleshooting):
 | **`doctor`** | diagnose a dark screen: device present? writable? sensors? service? |
 | `list` | print the detected device + sensors, then exit |
 
+After install, an **`aw5d-lcd`** command is on your `PATH`:
+
 ```sh
 # FIRST STOP if the screen is dark — checks device, permissions, sensors, service:
-python3 aw5d_lcd.py doctor
+aw5d-lcd doctor
 
 # show just the detected device + sensors:
-python3 aw5d_lcd.py list
+aw5d-lcd list
 
 # print what would be sent, without touching the device:
-python3 aw5d_lcd.py --dry-run --verbose
+aw5d-lcd --dry-run --verbose
 
 # send one frame and exit (a quick "does it light up" test):
-python3 aw5d_lcd.py --once --verbose
+aw5d-lcd --once --verbose
 
 # run the live loop by hand (Ctrl-C to stop):
-python3 aw5d_lcd.py --verbose
+aw5d-lcd --verbose
 ```
+
+> The command lives at `~/.local/bin/aw5d-lcd` (override the dir with `AW5D_BIN_DIR`, e.g.
+> `AW5D_BIN_DIR=/usr/local/bin`). If `aw5d-lcd` isn't found, add `~/.local/bin` to your `PATH`
+> or open a fresh shell. Running from a clone *before* installing? Use `python3 aw5d_lcd.py …`
+> (or `just doctor`).
 
 Useful flags: `--interval SECONDS`, `--device /dev/hidrawN`,
 `--temp-input /sys/class/hwmon/hwmonN/tempN_input`, `--version`.

@@ -44,6 +44,7 @@ import argparse
 import glob
 import os
 import re
+import shutil
 import signal
 import sys
 import time
@@ -335,7 +336,10 @@ def doctor() -> int:
     print("aw5d-lcd doctor\n")
     ok = True
 
-    print(f"[INFO] python {sys.version.split()[0]} on {sys.platform}")
+    py = ".".join(str(n) for n in sys.version_info[:3])
+    _check("python >= 3.8", True if sys.version_info >= (3, 8) else None,
+           f"{py} on {sys.platform}",
+           "the driver needs Python 3.8+ (uses bytes.hex separator); please upgrade")
 
     dev = find_hidraw()
     ok &= _check(f"cooler HID device {VENDOR_ID:04x}:{PRODUCT_ID:04x}", dev is not None,
@@ -378,6 +382,10 @@ def doctor() -> int:
                "start it with `systemctl --user start aw5d-lcd`, or run the driver directly")
     except Exception:
         pass
+
+    launcher = shutil.which("aw5d-lcd")
+    _check("aw5d-lcd command on PATH", True if launcher else None, launcher or "not found",
+           "run install.sh to create ~/.local/bin/aw5d-lcd, and ensure ~/.local/bin is on your PATH")
 
     print()
     if ok:

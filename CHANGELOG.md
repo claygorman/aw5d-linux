@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- An **`aw5d-lcd`** command on `PATH` — the installer creates `~/.local/bin/aw5d-lcd`
+  (override the dir with `AW5D_BIN_DIR`), so it's `aw5d-lcd doctor` instead of a long path.
+- Installer **preflight**: detects a Python 3.8+ interpreter (`python3` or `python`), fails
+  early with a clear message if missing, and renders the launcher + systemd unit with it
+  (robust to non-standard Python locations).
+- `doctor` now also reports the Python version and whether `aw5d-lcd` is on your `PATH`.
 - Unit test suite (stdlib `unittest`, `tests/`) run in CI — asserts `build_packet`
   against the captured golden packet (byte-for-byte), plus MHz/temp encoding, usage
   math, and env parsing. Run with `just test`.
