@@ -5,6 +5,11 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- One-line install via `bootstrap.sh` (`curl … | bash`) — fetches the repo and runs
+  `install.sh`; no reboot / no `rpm-ostree` layering needed on Bazzite/atomic.
+- A `Justfile` (`just install` / `uninstall` / `status` / `logs` / `set-interval N`).
+
 ## [1.0.0] - 2026-07-07
 
 Initial public release.

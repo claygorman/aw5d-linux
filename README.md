@@ -69,18 +69,35 @@ library — no pip dependencies.
 
 ## Install
 
+**One-liner:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/claygorman/aw5d-linux/main/bootstrap.sh | bash
+```
+
+**Or clone and review first** (recommended if you'd rather not pipe `curl` to `bash`):
+
 ```sh
 git clone https://github.com/claygorman/aw5d-linux
 cd aw5d-linux
-./install.sh
+./install.sh          # or, on Bazzite/SteamOS:  just install
 ```
 
-`install.sh` drops the driver in `~/.local/share/aw5d-lcd/`, installs a udev rule
-so the device is writable without root, and enables a **systemd user service**
-with lingering — so the screen updates on boot and keeps going even if you never
-log in graphically (or your compositor crashes to the desktop).
+Either way it drops the driver in `~/.local/share/aw5d-lcd/`, installs a udev rule
+so the device is writable without root, and enables a **systemd user service** with
+lingering — so the screen updates on boot and keeps going even if you never log in
+graphically (or your compositor crashes to the desktop).
 
-Uninstall with `./install.sh --uninstall`.
+Uninstall with `./install.sh --uninstall` (or `just uninstall`).
+
+### Bazzite / SteamOS / atomic distros
+
+This installs cleanly with **no `rpm-ostree` layering and no reboot** — everything
+lives in `$HOME` plus a single udev rule in `/etc`, and the cooler's hidraw node is
+made user-writable, so the `--user` service can drive it. (There's deliberately **no
+Flatpak/app-store build**: a hardware daemon needs raw `/dev/hidraw` access and a
+systemd service, which the Flatpak sandbox can't provide.) `just` recipes are included
+for the common actions — `just install`, `just status`, `just logs`, `just set-interval 2`.
 
 ## Manual / testing
 
