@@ -1,5 +1,10 @@
 # aw5d-linux
 
+[![CI](https://github.com/claygorman/aw5d-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/claygorman/aw5d-linux/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![authored by Claude (AI)](https://img.shields.io/badge/authored%20by-Claude%20(AI)-8A2BE2)](#authorship--ai-disclosure)
+![platform: Linux](https://img.shields.io/badge/platform-Linux-informational)
+
 Drive the **iBUYPOWER AW5 / AW5D** 360 mm AIO cooler's round LCD from **Linux** —
 no Windows, no vendor software.
 
