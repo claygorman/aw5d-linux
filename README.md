@@ -1,0 +1,143 @@
+# aw5d-linux
+
+Drive the **iBUYPOWER AW5 / AW5D** 360 mm AIO cooler's round LCD from **Linux** —
+no Windows, no vendor software.
+
+The AW5D's stock "digital gauge" (big CPU-temperature number, spinning fan,
+coloured arc + bars) is drawn and animated by the cooler's own firmware. All the
+host has to do is push **one 64-byte USB-HID report per second** with the live
+CPU stats. This project does exactly that, reading temperature / usage / clock
+straight from the Linux kernel — so the screen just works, natively.
+
+![the AW5D LCD driven from Linux](pictures/aw5d-lcd-on-linux.jpg)
+
+> Status: **working** on an iBUYPOWER unit (`3402:0407`, "CoolerMaster" variant)
+> on a Ryzen 7 7800X3D / Bazzite box. The three real readouts — temperature,
+> usage, clock — are exact. Contributions/other variants welcome.
+
+## Why this exists
+
+There is (was) **no** Linux support for this cooler in liquidctl, CoolerControl,
+or any community project — the vendor only ships a Windows app (HYTE Nexus). The
+cooler itself, though, is a plain USB-HID device that Linux can talk to directly.
+The full reverse-engineering story and the byte-level protocol are in
+[**RESEARCH.md**](RESEARCH.md).
+
+## How it works (short version)
+
+Each ~1 s the driver writes HID **output report `0x10`** (64 bytes) to the
+cooler's `hidraw` node:
+
+| offset | field | notes |
+|---|---|---|
+| 0 | `0x10` | report ID |
+| 1 | `0x08` | constant (packet type) |
+| 2 | **CPU usage %** | `0–100`, also drives the fan-spin animation |
+| 3–4 | **CPU clock (MHz)** | big-endian `uint16` — exact, e.g. `0x0EA9` = 3753 |
+| 5 | **CPU temperature °C** | integer — the big on-screen number |
+| 9 | blue temperature arc | cosmetic gauge level |
+| 10 | orange clock bar | cosmetic gauge level |
+| 11 | green usage bar | cosmetic gauge level |
+| 12 | `0xF0` / `0xF9` | normal / high-load styling flag |
+
+There is **no handshake, wake, or init packet** — you open the device and write.
+Sensors come from sysfs: `k10temp` (Tctl) for temperature, `/proc/stat` for
+usage, `cpufreq` for the average core clock. Everything is Python 3 standard
+library — no pip dependencies.
+
+## Requirements
+
+- Linux with the cooler on USB (`lsusb` shows `ID 3402:0407`)
+- Python 3.8+
+- An AMD Ryzen box for the temperature sensor out of the box (`k10temp` /
+  `zenpower`); Intel `coretemp` is also probed. Any CPU works if you point
+  `--temp-input` at the right `hwmonN/tempN_input`.
+
+## Install
+
+```sh
+git clone https://github.com/claygorman/aw5d-linux
+cd aw5d-linux
+./install.sh
+```
+
+`install.sh` drops the driver in `~/.local/share/aw5d-lcd/`, installs a udev rule
+so the device is writable without root, and enables a **systemd user service**
+with lingering — so the screen updates on boot and keeps going even if you never
+log in graphically (or your compositor crashes to the desktop).
+
+Uninstall with `./install.sh --uninstall`.
+
+## Manual / testing
+
+Run the driver directly (no install):
+
+```sh
+# show the detected device + sensors
+python3 aw5d_lcd.py --list
+
+# print what would be sent, without touching the device
+python3 aw5d_lcd.py --dry-run --verbose
+
+# send one frame and exit
+python3 aw5d_lcd.py --once --verbose
+
+# run the live loop (Ctrl-C to stop)
+python3 aw5d_lcd.py --verbose
+```
+
+Useful flags: `--interval SECONDS`, `--device /dev/hidrawN`,
+`--temp-input /sys/class/hwmon/hwmonN/tempN_input`.
+
+Manage the installed service:
+
+```sh
+systemctl --user status aw5d-lcd
+systemctl --user restart aw5d-lcd
+journalctl --user -u aw5d-lcd -f
+```
+
+## Permissions
+
+The udev rule (`udev/99-aw5d-lcd.rules`) sets the AW5D's `hidraw` node to `0666`
+so a non-root (and lingering, session-less) service can drive it. It's an
+internal cooler display, not a security boundary; adjust the mode/group if your
+threat model differs.
+
+## Prior art / thanks
+
+Same idea, other vendors — invaluable references while figuring this out:
+
+- [`Blaster4385/deepcool-display-linux`](https://github.com/Blaster4385/deepcool-display-linux)
+- [`Lexonight1/thermalright-trcc-linux`](https://github.com/Lexonight1/thermalright-trcc-linux)
+- [`sgtaziz/lian-li-linux`](https://github.com/sgtaziz/lian-li-linux)
+
+## Legal / clean-room note
+
+This is an independent, clean-room reimplementation based on our own
+**observations** of how the hardware behaves, for **interoperability**. It
+contains **no** vendor code: no decompiled sources, no bundled executables, and
+no firmware. "iBUYPOWER", "AW5", "HYTE", and "Nexus" are trademarks of their
+respective owners; this project is not affiliated with or endorsed by them.
+
+Use at your own risk. Writing to `hidraw` devices is inherently low-level; while
+this only ever sends the small status report described above, no warranty is
+provided (see [LICENSE](LICENSE)).
+
+## Authorship & AI disclosure
+
+In the interest of transparency: the **code and documentation in this repository
+were written by AI** — Anthropic's Claude (Claude Code, Opus 4.x) — working
+interactively with **Clay Gorman**. Clay owns the hardware, directed the
+reverse-engineering, captured the USB/HID protocol from the running device, and
+tested every result on the physical cooler. The protocol was derived from
+black-box observation (see [RESEARCH.md](RESEARCH.md)); Claude authored the
+driver, packaging, and docs from that shared investigation.
+
+If you're evaluating this for trust, that's the point of saying so plainly: it's
+a small, dependency-free, auditable Python script that only writes the documented
+status report to a `hidraw` device. Please read it before you run it.
+
+## License
+
+[MIT](LICENSE) © 2026 Clay Gorman

@@ -1,0 +1,4 @@
+# iBUYPOWER AW5D AIO cooler LCD (USB 3402:0407) — let a non-root/lingering
+# service drive the round display. MODE 0666 so it works even with no active
+# login session; TAG uaccess additionally grants the seated user an ACL.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3402", ATTRS{idProduct}=="0407", MODE="0666", TAG+="uaccess"

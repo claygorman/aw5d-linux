@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Editors / IDEs
+.idea/
+.vscode/
+
+# OS cruft
+.DS_Store
+
+# Local assets not for redistribution
+# (marketing render + the Telegram-cache symlink; the committed photo is
+#  pictures/aw5d-lcd-on-linux.jpg)
+pictures/CleanShot*.png
+pictures/telegram-cloud-photo-*

@@ -1,0 +1,14 @@
+[Unit]
+Description=iBUYPOWER AW5D cooler LCD (CPU gauge from lm-sensors)
+Documentation=https://github.com/claygorman/aw5d-linux
+After=graphical-session.target
+
+[Service]
+Type=simple
+# %h expands to the user's home. install.sh drops the script here.
+ExecStart=/usr/bin/python3 %h/.local/share/aw5d-lcd/aw5d_lcd.py --interval 1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
