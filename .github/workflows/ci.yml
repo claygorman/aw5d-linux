@@ -21,3 +21,14 @@ jobs:
         run: pipx run ruff check --select F aw5d_lcd.py
       - name: Shell syntax check
         run: bash -n install.sh
+      - name: Installer smoke test (no recursion; completes once)
+        run: |
+          tmp=$(mktemp -d); mkdir -p "$tmp/bin"
+          for c in sudo systemctl loginctl udevadm; do printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/$c"; chmod +x "$tmp/bin/$c"; done
+          out=$(HOME="$tmp" PATH="$tmp/bin:$PATH" timeout 30 bash install.sh 2>&1) || true
+          printf '%s\n' "$out"
+          n=$(printf '%s\n' "$out" | grep -c 'installing driver')
+          test "$n" -eq 1 || { echo "FAIL: recursion — 'installing driver' appeared $n times"; exit 1; }
+          printf '%s\n' "$out" | grep -q 'should now show live CPU stats' || { echo "FAIL: installer did not complete"; exit 1; }
+          test -x "$tmp/.local/bin/aw5d-lcd" || { echo "FAIL: launcher not created"; exit 1; }
+          echo "installer smoke test OK"

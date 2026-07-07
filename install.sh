@@ -57,7 +57,9 @@ uninstall() {
     log "uninstalled. (linger left enabled; disable with: loginctl disable-linger $USER)"
 }
 
-install() {
+# NOTE: do NOT name this function `install` — it would shadow the coreutils
+# `install` command used below and recurse infinitely.
+do_install() {
     if ! detect_python; then
         echo "[aw5d-lcd] error: Python 3.8+ is required (tried 'python3' and 'python')." >&2
         echo "[aw5d-lcd]        install Python 3 and retry (Bazzite/Fedora ship it as 'python3')." >&2
@@ -119,6 +121,6 @@ EOF
 
 case "${1:-}" in
     --uninstall|-u) uninstall ;;
-    "" ) install ;;
+    "" ) do_install ;;
     * ) echo "usage: $0 [--uninstall]" >&2; exit 2 ;;
 esac

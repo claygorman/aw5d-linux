@@ -5,6 +5,19 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-07
+
+### Fixed
+- **`install.sh` infinite recursion** — the installer's shell function was named
+  `install`, which shadowed the coreutils `install` command it calls to copy files, so
+  it recursed into itself instead of installing (present in v1.0.0 and v1.1.0; the
+  installer never actually worked). Renamed the function to `do_install`.
+
+### Added
+- CI **installer smoke test** — runs `install.sh` in a sandbox (temp `HOME` + stubbed
+  `sudo`/`systemctl`/…) and asserts it completes exactly once, guarding against this
+  class of bug (`bash -n` alone can't catch runtime recursion).
+
 ## [1.1.0] - 2026-07-07
 
 ### Added
@@ -47,6 +60,7 @@ Initial public release.
   variant" issue form, and `CODEOWNERS`.
 - Full reverse-engineering writeup and validated protocol in `RESEARCH.md`.
 
-[Unreleased]: https://github.com/claygorman/aw5d-linux/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/claygorman/aw5d-linux/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/claygorman/aw5d-linux/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/claygorman/aw5d-linux/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/claygorman/aw5d-linux/releases/tag/v1.0.0
