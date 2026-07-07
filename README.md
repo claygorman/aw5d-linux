@@ -109,6 +109,7 @@ driver by hand. But it has three commands (handy for setup + troubleshooting):
 | `run` *(default)* | drive the LCD in a loop (what the service runs) |
 | **`doctor`** | diagnose a dark screen: device present? writable? sensors? service? |
 | `list` | print the detected device + sensors, then exit |
+| `self-update` | manually fetch the latest, reinstall, and restart (never automatic) |
 
 After install, an **`aw5d-lcd`** command is on your `PATH`:
 
@@ -179,14 +180,18 @@ systemctl --user restart aw5d-lcd
 
 > [!NOTE]
 > **This project never auto-updates.** There is no background updater, no systemd timer,
-> and no cron job — and the driver itself makes **no network calls** (it only reads sensors
-> and writes to the LCD). Nothing phones home. You update **only** when *you* choose to.
+> and no cron job — and the driver itself makes **no network calls** while running (it only
+> reads sensors and writes to the LCD). Nothing phones home. `self-update` fetches from the
+> network **only** when you run it. You update **only** when *you* choose to.
 
 ```sh
-# One-liner users: just re-run it (fetches latest + reinstalls):
+# Easiest — the built-in manual updater (fetches latest, reinstalls, restarts the service):
+aw5d-lcd self-update
+
+# Or re-run the one-liner:
 curl -fsSL https://raw.githubusercontent.com/claygorman/aw5d-linux/main/bootstrap.sh | bash
 
-# From a clone:
+# Or from a clone:
 git pull && ./install.sh          # or:  just update
 ```
 

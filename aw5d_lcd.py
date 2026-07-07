@@ -56,6 +56,7 @@ REPORT_ID = 0x10
 REPORT_LEN = 64  # report id + 63 payload bytes
 
 __version__ = "1.0.0"
+REPO_URL = "https://github.com/claygorman/aw5d-linux"
 
 # The cooler's firmware re-renders the gauge at ~1 Hz, so ~1s is the natural cadence.
 DEFAULT_INTERVAL = 1.0
@@ -395,13 +396,55 @@ def doctor() -> int:
     return 1
 
 
+def self_update() -> int:
+    """Manually update to the latest release, then reinstall + restart the service.
+
+    Runs ONLY when you invoke ``aw5d-lcd self-update`` — nothing here is automatic.
+    Refreshes a shallow git checkout (``~/.local/share/aw5d-lcd-src``, override with
+    ``AW5D_SRC_DIR``) and re-runs its ``install.sh``.
+    """
+    import subprocess
+
+    if not shutil.which("git"):
+        raw = REPO_URL.replace("github.com", "raw.githubusercontent.com")
+        print("[aw5d-lcd] self-update needs 'git'. Or re-run the installer:\n"
+              f"  curl -fsSL {raw}/main/bootstrap.sh | bash", file=sys.stderr)
+        return 1
+
+    src = os.environ.get("AW5D_SRC_DIR") or os.path.expanduser("~/.local/share/aw5d-lcd-src")
+    env = dict(os.environ)
+    env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    try:
+        if os.path.isdir(os.path.join(src, ".git")):
+            print(f"[aw5d-lcd] updating {src}")
+            subprocess.run(["git", "-C", src, "fetch", "--depth", "1", "-q", "origin", "main"],
+                           check=True)
+            subprocess.run(["git", "-C", src, "reset", "--hard", "-q", "origin/main"], check=True)
+        else:
+            print(f"[aw5d-lcd] cloning {REPO_URL} -> {src}")
+            shutil.rmtree(src, ignore_errors=True)
+            subprocess.run(["git", "clone", "--depth", "1", "-q", REPO_URL, src], check=True)
+
+        print("[aw5d-lcd] running installer")
+        subprocess.run(["bash", os.path.join(src, "install.sh")], env=env, check=True)
+        # Restart so the running service picks up the new code (install.sh won't restart it).
+        subprocess.run(["systemctl", "--user", "restart", "aw5d-lcd.service"], env=env, check=False)
+    except subprocess.CalledProcessError as exc:
+        print(f"[aw5d-lcd] self-update failed: {exc}", file=sys.stderr)
+        return 1
+
+    print("[aw5d-lcd] up to date. (manual only — aw5d-lcd never auto-updates.)")
+    return 0
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="aw5d-lcd",
         description="Drive the iBUYPOWER AW5D cooler LCD from Linux (stock CPU gauge).",
     )
-    p.add_argument("command", nargs="?", choices=("run", "doctor", "list"), default="run",
-                   help="run (default) | doctor (diagnostics) | list (device + sensors)")
+    p.add_argument("command", nargs="?",
+                   choices=("run", "doctor", "list", "self-update"), default="run",
+                   help="run (default) | doctor | list | self-update (manual update)")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("-i", "--interval", type=float, default=_env_interval(), metavar="SECONDS",
                    help="seconds between frames (default: 1.0, or $AW5D_INTERVAL). The panel "
@@ -423,6 +466,8 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def main(argv=None) -> int:
     args = parse_args(argv)
+    if args.command == "self-update":
+        return self_update()
     if args.command == "doctor":
         return doctor()
     if args.command == "list" or args.list:

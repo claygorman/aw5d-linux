@@ -6,6 +6,9 @@ All notable changes to this project are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- `aw5d-lcd self-update` — a **manual** updater (fetches latest via git, reinstalls,
+  restarts the service). Runs only when invoked; nothing auto-updates. `AW5D_SRC_DIR`
+  overrides the checkout location.
 - An **`aw5d-lcd`** command on `PATH` — the installer creates `~/.local/bin/aw5d-lcd`
   (override the dir with `AW5D_BIN_DIR`), so it's `aw5d-lcd doctor` instead of a long path.
 - Installer **preflight**: detects a Python 3.8+ interpreter (`python3` or `python`), fails

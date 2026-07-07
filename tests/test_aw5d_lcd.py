@@ -103,5 +103,14 @@ class EnvIntervalTest(unittest.TestCase):
         self.assertEqual(a._env_interval(), a.DEFAULT_INTERVAL)
 
 
+class ParseArgsTest(unittest.TestCase):
+    def test_default_command_is_run(self):
+        self.assertEqual(a.parse_args([]).command, "run")
+
+    def test_all_commands_recognized(self):
+        for cmd in ("run", "doctor", "list", "self-update"):
+            self.assertEqual(a.parse_args([cmd]).command, cmd)
+
+
 if __name__ == "__main__":
     unittest.main()
