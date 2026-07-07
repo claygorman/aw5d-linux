@@ -66,6 +66,7 @@ install() {
     sleep 1
     if systemctl --user is-active --quiet "$SERVICE"; then
         log "running. the cooler LCD should now show live CPU stats."
+        log "no auto-update: re-run the installer (or 'just update') whenever you want the latest."
     else
         log "service is not active — check: journalctl --user -u $SERVICE -n 30"
         exit 1

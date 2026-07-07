@@ -155,6 +155,25 @@ systemctl --user restart aw5d-lcd
 `install.sh` drops a commented `~/.config/aw5d-lcd.env` for you (see
 [`aw5d-lcd.env.example`](aw5d-lcd.env.example)); it's never overwritten on re-install.
 
+## Updating
+
+> [!NOTE]
+> **This project never auto-updates.** There is no background updater, no systemd timer,
+> and no cron job — and the driver itself makes **no network calls** (it only reads sensors
+> and writes to the LCD). Nothing phones home. You update **only** when *you* choose to.
+
+```sh
+# One-liner users: just re-run it (fetches latest + reinstalls):
+curl -fsSL https://raw.githubusercontent.com/claygorman/aw5d-linux/main/bootstrap.sh | bash
+
+# From a clone:
+git pull && ./install.sh          # or:  just update
+```
+
+Your `~/.config/aw5d-lcd.env` (interval, etc.) is never overwritten, so your settings
+survive updates. To pin a version, just don't run the update — or check out a tag
+(`git checkout v1.0.0`).
+
 ## Permissions
 
 The udev rule (`udev/99-aw5d-lcd.rules`) sets the AW5D's `hidraw` node to `0666`

@@ -13,6 +13,13 @@ install:
 uninstall:
     ./install.sh --uninstall
 
+# Manually update to the latest (this project never auto-updates)
+update:
+    git pull --ff-only
+    ./install.sh
+    systemctl --user restart aw5d-lcd
+    @echo "aw5d-lcd updated + restarted. Nothing auto-updates — run 'just update' whenever you like."
+
 # Show the service status
 status:
     systemctl --user status aw5d-lcd

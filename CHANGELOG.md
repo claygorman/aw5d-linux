@@ -8,7 +8,9 @@ All notable changes to this project are documented here. Format loosely follows
 ### Added
 - One-line install via `bootstrap.sh` (`curl … | bash`) — fetches the repo and runs
   `install.sh`; no reboot / no `rpm-ostree` layering needed on Bazzite/atomic.
-- A `Justfile` (`just install` / `uninstall` / `status` / `logs` / `set-interval N`).
+- A `Justfile` (`just install` / `uninstall` / `update` / `status` / `logs` / `set-interval N`).
+- "Updating" guide + `just update` for **manual** updates; documented that the project
+  **never auto-updates** (no background updater/timer/cron; the driver makes no network calls).
 
 ## [1.0.0] - 2026-07-07
 
