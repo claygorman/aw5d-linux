@@ -32,6 +32,10 @@ logs:
 list:
     python3 aw5d_lcd.py --list
 
+# Diagnose a dark screen (device / permissions / sensors / service)
+doctor:
+    python3 aw5d_lcd.py doctor
+
 # Set the LCD update interval in seconds, e.g. `just set-interval 2`
 # (panel is ~1 Hz; 1s is ideal, 2-5s is fine, <0.5s just wastes traffic)
 set-interval seconds:

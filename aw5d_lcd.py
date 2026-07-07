@@ -321,11 +321,79 @@ def _env_interval() -> float:
         return DEFAULT_INTERVAL
 
 
+def _check(label: str, state, detail: str = "", hint: str = "") -> bool:
+    """Print one doctor line. state: True=OK, None=WARN, False=FAIL. Returns state is not False."""
+    mark = {True: "OK  ", None: "WARN", False: "FAIL"}[state]
+    print(f"[{mark}] {label}" + (f": {detail}" if detail else ""))
+    if hint and state is not True:
+        print(f"       -> {hint}")
+    return state is not False
+
+
+def doctor() -> int:
+    """Run diagnostics and print a pass/fail report. Exit 1 if a critical check fails."""
+    print("aw5d-lcd doctor\n")
+    ok = True
+
+    print(f"[INFO] python {sys.version.split()[0]} on {sys.platform}")
+
+    dev = find_hidraw()
+    ok &= _check(f"cooler HID device {VENDOR_ID:04x}:{PRODUCT_ID:04x}", dev is not None,
+                 dev or "NOT FOUND",
+                 "is the cooler's USB header plugged in? check `lsusb | grep -i 3402`")
+
+    if dev is not None:
+        writable = os.access(dev, os.W_OK)
+        ok &= _check(f"{dev} writable", writable, "yes" if writable else "PERMISSION DENIED",
+                     f"install the udev rule (udev/99-aw5d-lcd.rules) or: sudo chmod 0666 {dev}")
+
+    temp_input = find_cpu_temp_input()
+    if temp_input:
+        _check("CPU temperature sensor", True, f"{temp_input} = {read_temp_c(temp_input):.1f} C")
+    else:
+        _check("CPU temperature sensor", None, "not found",
+               "no k10temp/zenpower/coretemp; temp will read 0. Override with --temp-input")
+
+    mhz = read_avg_mhz()
+    _check("CPU frequency (cpufreq)", True if mhz > 0 else None,
+           f"{mhz} MHz" if mhz else "unavailable (MHz will read 0; cosmetic)")
+
+    try:
+        read_cpu_times()
+        _check("CPU usage (/proc/stat)", True, "readable")
+    except OSError:
+        _check("CPU usage (/proc/stat)", None, "unreadable (usage will read 0)")
+
+    temp = read_temp_c(temp_input) if temp_input else 0.0
+    print(f"[INFO] sample frame: {build_packet(0.0, mhz, temp)[:13].hex(' ')}")
+
+    try:
+        import subprocess
+        env = dict(os.environ)
+        env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+        state = subprocess.run(["systemctl", "--user", "is-active", "aw5d-lcd.service"],
+                               capture_output=True, text=True, env=env).stdout.strip()
+        _check("systemd service aw5d-lcd", True if state == "active" else None,
+               state or "not installed",
+               "start it with `systemctl --user start aw5d-lcd`, or run the driver directly")
+    except Exception:
+        pass
+
+    print()
+    if ok:
+        print("=> all critical checks passed; the LCD should be drivable.")
+        return 0
+    print("=> critical checks FAILED (see the FAIL line(s) above).")
+    return 1
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="aw5d-lcd",
         description="Drive the iBUYPOWER AW5D cooler LCD from Linux (stock CPU gauge).",
     )
+    p.add_argument("command", nargs="?", choices=("run", "doctor", "list"), default="run",
+                   help="run (default) | doctor (diagnostics) | list (device + sensors)")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("-i", "--interval", type=float, default=_env_interval(), metavar="SECONDS",
                    help="seconds between frames (default: 1.0, or $AW5D_INTERVAL). The panel "
@@ -347,7 +415,9 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    if args.list:
+    if args.command == "doctor":
+        return doctor()
+    if args.command == "list" or args.list:
         dev = find_hidraw()
         temp_input = find_cpu_temp_input()
         print(f"device       : {dev or 'NOT FOUND'}  ({VENDOR_ID:04x}:{PRODUCT_ID:04x})")

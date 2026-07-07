@@ -99,26 +99,39 @@ Flatpak/app-store build**: a hardware daemon needs raw `/dev/hidraw` access and 
 systemd service, which the Flatpak sandbox can't provide.) `just` recipes are included
 for the common actions — `just install`, `just status`, `just logs`, `just set-interval 2`.
 
-## Manual / testing
+## Usage
 
-Run the driver directly (no install):
+Once installed, the systemd service runs `run` for you — you don't normally invoke the
+driver by hand. But it has three commands (handy for setup + troubleshooting):
+
+| Command | What it does |
+|---|---|
+| `run` *(default)* | drive the LCD in a loop (what the service runs) |
+| **`doctor`** | diagnose a dark screen: device present? writable? sensors? service? |
+| `list` | print the detected device + sensors, then exit |
 
 ```sh
-# show the detected device + sensors
-python3 aw5d_lcd.py --list
+# FIRST STOP if the screen is dark — checks device, permissions, sensors, service:
+python3 aw5d_lcd.py doctor
 
-# print what would be sent, without touching the device
+# show just the detected device + sensors:
+python3 aw5d_lcd.py list
+
+# print what would be sent, without touching the device:
 python3 aw5d_lcd.py --dry-run --verbose
 
-# send one frame and exit
+# send one frame and exit (a quick "does it light up" test):
 python3 aw5d_lcd.py --once --verbose
 
-# run the live loop (Ctrl-C to stop)
+# run the live loop by hand (Ctrl-C to stop):
 python3 aw5d_lcd.py --verbose
 ```
 
 Useful flags: `--interval SECONDS`, `--device /dev/hidrawN`,
-`--temp-input /sys/class/hwmon/hwmonN/tempN_input`.
+`--temp-input /sys/class/hwmon/hwmonN/tempN_input`, `--version`.
+
+On Bazzite/SteamOS the same actions are available via `just` — `just doctor`,
+`just list`, `just logs`, `just set-interval 2`.
 
 Manage the installed service:
 
@@ -180,6 +193,13 @@ The udev rule (`udev/99-aw5d-lcd.rules`) sets the AW5D's `hidraw` node to `0666`
 so a non-root (and lingering, session-less) service can drive it. It's an
 internal cooler display, not a security boundary; adjust the mode/group if your
 threat model differs.
+
+## Contributing
+
+Contributions welcome — especially **reports for other AW5-family variants**
+(`1029` / `1030`, or anything that isn't `3402:0407`). See
+[CONTRIBUTING.md](CONTRIBUTING.md) for how to report a variant and the clean-room rule,
+and [RESEARCH.md](RESEARCH.md) for the protocol and how it was reverse-engineered.
 
 ## Prior art / thanks
 
