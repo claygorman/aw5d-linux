@@ -159,9 +159,67 @@ them, so exact-match isn't needed).
   report**; the whole protocol is open + one `write()` of report 0x10, repeat ~1/sec
 - [x] **Validate every packet byte** against the helper's concurrent HWiNFO output (usage=b2,
   mhz/256=b3, temp×256=b4-5 all exact; arc/bar/flag bytes are cosmetic best-fit)
-- [ ] Write the Linux daemon (python-hidraw or Rust hidapi + lm-sensors) — **pure offline work,
-  spec complete; no more Windows needed**
-- [ ] Package + publish
+- [x] Write the Linux daemon (`aw5d_lcd.py`, python-hidraw + lm-sensors) — first light confirmed on a live unit
+- [x] Package + publish (systemd user service + udev rule + installer) — this repo
+
+### Scope / not yet implemented (help wanted)
+
+- **Custom-image / GIF "ScreenTime" mode** (a JPEG streamed over report `0x10`) is intentionally
+  **out of scope** — only the firmware-drawn stock CPU gauge is implemented. PRs welcome.
+- **Other variants:** only PID `0x0407` ("CoolerMaster") is confirmed. The `0x0405`/`0x0406`
+  (1029/1030, "Levelplay") units almost certainly speak the same report but are **untested** — if
+  you have one, please open an issue with your `lsusb` line and whether the gauge lights up.
+- **Non-AMD sensors:** temperature auto-detects `k10temp`/`zenpower`/`coretemp`; anything else
+  works by pointing `--temp-input` at the right `hwmonN/tempN_input`.
+
+## How this was figured out (methodology & tools)
+
+A **clean-room, black-box** effort: everything here comes from *observing how the hardware and
+the vendor software behave*, for interoperability — no vendor source, firmware, or binaries are
+redistributed. The path, in order:
+
+1. **Is it even reachable from Linux?** `lsusb` shows `3402:0407`; the device binds to
+   `hid-generic` at `/dev/hidrawN` and is world-writable. A read-only probe (HID feature reports)
+   returned empty → the controller is **push-only** (the host sends frames; nothing reads back).
+   "Windows only" really just meant "no driver written yet."
+
+2. **Who actually drives the screen?** The Windows app (HYTE Nexus) doesn't — it launches a small
+   bundled **Rust helper** (a per-PID variant; ours is "CoolerMaster") that uses the cross-platform
+   `hidapi` library, reads sensors via HWiNFO, and writes to the HID device. Cross-platform hidapi
+   meant a Linux port would be a near-direct mirror.
+
+3. **Capture the wire protocol — don't guess.** Attach [Frida](https://frida.re) to the running
+   helper and log its HID writes (`NtWriteFile` / `HidD_*`, filtered to 64-byte buffers). This
+   showed a single repeating **64-byte HID output report `0x10`** ~1/sec — and *no* image stream
+   for the stock gauge (the JPEG path is only the custom-image mode).
+
+4. **Decode against ground truth.** The helper conveniently logs the live HWiNFO values it read
+   (CPU temp / usage / MHz) right next to each packet, so every byte could be checked against a
+   *known number* rather than guessed. That pinned usage (byte 2) and temperature immediately.
+
+5. **A photo of the screen corrected a real mistake.** An early decode read bytes 4–5 as
+   "temperature ÷ 256" — plausible, and it *looked* right (`0x3bA9/256 ≈ 59`). But a photo of the
+   LCD reading "**9 % 3963 MHz**" (a *precise* clock) proved byte 4 was the **MHz low byte**, not a
+   temp fraction. Re-checking against HWiNFO confirmed **bytes 3–4 = exact MHz (big-endian)** and
+   **byte 5 = integer °C**. Lesson: cross-check a black-box decode against *what the device itself
+   displays*.
+
+6. **Confirm there's no secret handshake.** A fresh-spawn Frida capture of the helper's very first
+   instructions showed the whole startup is just: open the HID device → standard hidapi enumeration
+   (which the OS answers) → the same `0x10` write. **No wake/init/firmware packet.** So the Linux
+   driver is simply: open `/dev/hidraw` and write the report, ~1/sec.
+
+**Tools:** `lsusb` + sysfs (device/descriptors), [Frida](https://frida.re) (dynamic HID-write
+capture), `nm` / `objdump` / `radare2` (symbolizing packet-builder & crash offsets) — all used to
+*understand behaviour*, not to copy code.
+
+**How to trust it:** the three real readouts (temp, usage, MHz) are validated exactly against
+HWiNFO *and* the on-screen numbers. The cosmetic gauge bytes (arc/bars/flags) are best-fit and
+labelled as such — the firmware eases them, so exact values aren't required.
+
+**Human + AI:** the hardware was reverse-engineered and every result tested on a real unit by the
+author; the driver and this writeup were authored by Claude (Anthropic's Claude Code). See the
+README's *Authorship & AI disclosure*.
 
 ## Prior art / templates (different vendors, same idea)
 

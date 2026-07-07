@@ -3,6 +3,15 @@
 Drive the **iBUYPOWER AW5 / AW5D** 360 mm AIO cooler's round LCD from **Linux** —
 no Windows, no vendor software.
 
+> [!WARNING]
+> **AI-authored · use at your own risk.** The code and documentation in this repository were
+> written by **Claude (Anthropic's Claude Code)** working with the author, from black-box
+> reverse-engineering of the hardware (details: [Authorship & AI disclosure](#authorship--ai-disclosure)
+> and [How this was figured out](RESEARCH.md#how-this-was-figured-out-methodology--tools)).
+> It ships **no vendor code**. It's a small, dependency-free, auditable script that only writes
+> the documented status report to a `hidraw` device — but it comes with **absolutely no
+> warranty**; you run it entirely at your own risk (see [LICENSE](LICENSE)). Read it before you run it.
+
 The AW5D's stock "digital gauge" (big CPU-temperature number, spinning fan,
 coloured arc + bars) is drawn and animated by the cooler's own firmware. All the
 host has to do is push **one 64-byte USB-HID report per second** with the live
