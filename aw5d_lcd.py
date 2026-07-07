@@ -55,7 +55,7 @@ PRODUCT_ID = 0x0407
 REPORT_ID = 0x10
 REPORT_LEN = 64  # report id + 63 payload bytes
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 REPO_URL = "https://github.com/claygorman/aw5d-linux"
 
 # The cooler's firmware re-renders the gauge at ~1 Hz, so ~1s is the natural cadence.

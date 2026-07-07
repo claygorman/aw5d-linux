@@ -5,28 +5,30 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-07
+
 ### Added
 - `aw5d-lcd self-update` — a **manual** updater (fetches latest via git, reinstalls,
   restarts the service). Runs only when invoked; nothing auto-updates. `AW5D_SRC_DIR`
   overrides the checkout location.
 - An **`aw5d-lcd`** command on `PATH` — the installer creates `~/.local/bin/aw5d-lcd`
   (override the dir with `AW5D_BIN_DIR`), so it's `aw5d-lcd doctor` instead of a long path.
+- `doctor` command — diagnoses device presence, hidraw writability, CPU sensors, Python
+  version, service state, and whether `aw5d-lcd` is on `PATH`, with fix hints; exits
+  non-zero on a critical failure. The first stop for a dark screen.
 - Installer **preflight**: detects a Python 3.8+ interpreter (`python3` or `python`), fails
   early with a clear message if missing, and renders the launcher + systemd unit with it
   (robust to non-standard Python locations).
-- `doctor` now also reports the Python version and whether `aw5d-lcd` is on your `PATH`.
-- Unit test suite (stdlib `unittest`, `tests/`) run in CI — asserts `build_packet`
-  against the captured golden packet (byte-for-byte), plus MHz/temp encoding, usage
-  math, and env parsing. Run with `just test`.
-- `doctor` command (`python3 aw5d_lcd.py doctor` / `just doctor`) — diagnoses device
-  presence, hidraw writability, CPU sensors, and service state, with fix hints; exits
-  non-zero on a critical failure. The first stop for a dark screen.
-- Commands `run` / `doctor` / `list` (positional) and a README **Usage** section.
 - One-line install via `bootstrap.sh` (`curl … | bash`) — fetches the repo and runs
   `install.sh`; no reboot / no `rpm-ostree` layering needed on Bazzite/atomic.
-- A `Justfile` (`just install` / `uninstall` / `update` / `doctor` / `status` / `logs` / `set-interval N`).
-- "Updating" guide + `just update` for **manual** updates; documented that the project
-  **never auto-updates** (no background updater/timer/cron; the driver makes no network calls).
+- Positional commands `run` / `doctor` / `list` / `self-update` and a README **Usage** section.
+- Unit test suite (stdlib `unittest`, `tests/`) run in CI — asserts `build_packet` against
+  the captured golden packet (byte-for-byte), plus MHz/temp encoding, usage math, env
+  parsing, and command wiring. Run with `just test`.
+- A `Justfile` (`just install` / `uninstall` / `update` / `doctor` / `test` / `list` /
+  `status` / `logs` / `set-interval N`).
+- "Updating" guide documenting that the project **never auto-updates** (no background
+  updater/timer/cron; the driver makes no network calls while running).
 
 ## [1.0.0] - 2026-07-07
 
@@ -45,5 +47,6 @@ Initial public release.
   variant" issue form, and `CODEOWNERS`.
 - Full reverse-engineering writeup and validated protocol in `RESEARCH.md`.
 
-[Unreleased]: https://github.com/claygorman/aw5d-linux/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/claygorman/aw5d-linux/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/claygorman/aw5d-linux/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/claygorman/aw5d-linux/releases/tag/v1.0.0
