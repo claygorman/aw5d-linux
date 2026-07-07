@@ -54,6 +54,13 @@ PRODUCT_ID = 0x0407
 REPORT_ID = 0x10
 REPORT_LEN = 64  # report id + 63 payload bytes
 
+__version__ = "1.0.0"
+
+# The cooler's firmware re-renders the gauge at ~1 Hz, so ~1s is the natural cadence.
+DEFAULT_INTERVAL = 1.0
+MIN_USEFUL_INTERVAL = 0.5  # below this, pushing adds USB/CPU traffic with no visible gain
+MIN_INTERVAL = 0.05        # hard floor to avoid a busy loop
+
 # --------------------------------------------------------------------------- #
 # Device discovery
 # --------------------------------------------------------------------------- #
@@ -217,6 +224,17 @@ def log(msg: str, *, verbose: bool = True) -> None:
 def run(args: argparse.Namespace) -> int:
     _install_signal_handlers()
 
+    # Guard the update interval. The panel only refreshes ~1 Hz, so very small
+    # intervals just burn USB/CPU for no visible benefit; 0 would busy-loop.
+    if args.interval < MIN_INTERVAL:
+        log(f"WARNING: interval {args.interval}s is too low; clamping to {MIN_INTERVAL}s "
+            "(0 would busy-loop the CPU)", verbose=True)
+        args.interval = MIN_INTERVAL
+    elif args.interval < MIN_USEFUL_INTERVAL:
+        log(f"NOTE: interval {args.interval}s is below the panel's ~1 Hz refresh — this adds "
+            "USB/CPU traffic with no visible benefit. ~1s is ideal; 2-5s is fine and lighter.",
+            verbose=True)
+
     temp_input = args.temp_input or find_cpu_temp_input()
     if not temp_input:
         log("WARNING: no CPU temperature sensor found (k10temp/zenpower/coretemp); "
@@ -292,13 +310,26 @@ def run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _env_interval() -> float:
+    """Frame interval default, overridable via the ``AW5D_INTERVAL`` env var."""
+    raw = os.environ.get("AW5D_INTERVAL")
+    if raw is None:
+        return DEFAULT_INTERVAL
+    try:
+        return float(raw)
+    except ValueError:
+        return DEFAULT_INTERVAL
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="aw5d-lcd",
         description="Drive the iBUYPOWER AW5D cooler LCD from Linux (stock CPU gauge).",
     )
-    p.add_argument("-i", "--interval", type=float, default=1.0,
-                   help="seconds between frames (default: 1.0)")
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    p.add_argument("-i", "--interval", type=float, default=_env_interval(), metavar="SECONDS",
+                   help="seconds between frames (default: 1.0, or $AW5D_INTERVAL). The panel "
+                        "refreshes ~1 Hz; values below ~0.5s add traffic with no visible benefit.")
     p.add_argument("-d", "--device", metavar="PATH",
                    help="hidraw node to use (default: auto-detect 3402:0407)")
     p.add_argument("--temp-input", metavar="PATH",

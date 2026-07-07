@@ -43,6 +43,13 @@ install() {
     mkdir -p "$SHARE_DIR" "$UNIT_DIR"
     install -m 0755 "$REPO_DIR/aw5d_lcd.py" "$SHARE_DIR/aw5d_lcd.py"
 
+    # Default config (update interval etc.) — never clobber an existing one.
+    mkdir -p "$HOME/.config"
+    if [[ ! -f "$HOME/.config/aw5d-lcd.env" ]]; then
+        install -m 0644 "$REPO_DIR/aw5d-lcd.env.example" "$HOME/.config/aw5d-lcd.env"
+        log "wrote default config -> ~/.config/aw5d-lcd.env (set AW5D_INTERVAL to change update rate)"
+    fi
+
     log "installing udev rule -> $UDEV_RULE (sudo)"
     sudo install -m 0644 "$REPO_DIR/udev/99-aw5d-lcd.rules" "$UDEV_RULE"
     sudo udevadm control --reload-rules

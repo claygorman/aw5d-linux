@@ -106,6 +106,33 @@ systemctl --user restart aw5d-lcd
 journalctl --user -u aw5d-lcd -f
 ```
 
+## Configuration
+
+**Update interval** — how often the driver pushes fresh CPU stats to the LCD (default **1 s**).
+
+> [!NOTE]
+> The cooler's firmware re-renders the gauge at **~1 Hz**, so **1 s is the sweet spot**. **2–5 s**
+> is perfectly fine and a touch lighter on CPU/USB. **Anything below ~0.5 s just adds USB/CPU
+> traffic with no visible benefit** — the panel won't update faster. `0` would busy-loop, so the
+> driver clamps it to `0.05 s` and warns.
+
+Three ways to set it (highest precedence first):
+
+```sh
+# 1. CLI flag, when running directly:
+python3 aw5d_lcd.py --interval 2
+
+# 2. Env var — the installed service reads ~/.config/aw5d-lcd.env:
+echo 'AW5D_INTERVAL=2' > ~/.config/aw5d-lcd.env
+systemctl --user restart aw5d-lcd
+
+# 3. Or a full systemd override, if you prefer:
+#    systemctl --user edit aw5d-lcd   → add [Service] / blank ExecStart= / new ExecStart=…
+```
+
+`install.sh` drops a commented `~/.config/aw5d-lcd.env` for you (see
+[`aw5d-lcd.env.example`](aw5d-lcd.env.example)); it's never overwritten on re-install.
+
 ## Permissions
 
 The udev rule (`udev/99-aw5d-lcd.rules`) sets the AW5D's `hidraw` node to `0666`

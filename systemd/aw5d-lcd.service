@@ -6,7 +6,10 @@ After=graphical-session.target
 [Service]
 Type=simple
 # %h expands to the user's home. install.sh drops the script here.
-ExecStart=/usr/bin/python3 %h/.local/share/aw5d-lcd/aw5d_lcd.py --interval 1
+# Optional config: set AW5D_INTERVAL (seconds between frames) in ~/.config/aw5d-lcd.env.
+# The '-' makes the file optional; default interval is 1s if it's absent.
+EnvironmentFile=-%h/.config/aw5d-lcd.env
+ExecStart=/usr/bin/python3 %h/.local/share/aw5d-lcd/aw5d_lcd.py
 Restart=always
 RestartSec=3
 
